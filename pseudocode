@@ -1,0 +1,11 @@
+takes three parameters - a filename, a local path and an MTP path
+the file contains a list of .m3u playlists, the local path is the music library root, the MTP path is the Android phone music library root
+error check command-line parameter
+open file (error if not found)
+iterate over lines in file
+	read name of playlist file
+	open playlist file
+	iterate over lines in the file
+		rsync file to destination
+	end iteration
+end iteration
