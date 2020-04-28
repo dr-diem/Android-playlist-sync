@@ -29,7 +29,7 @@
 #
 #      adb forward tcp:2222 tcp:2222
 #
-# 2. Get  SSHD running on the phone. This script assumes the root folder when logged in will 
+# 2. Get an SSHD running on the phone. This script assumes the root folder when logged in will 
 #	 contain a sub-directory path named SDCard/Music (again, this is the default for SSHelper)
 
 SPATH="/usr/local/sbin"
@@ -46,9 +46,37 @@ die () {
 
 printf "\n\n\nStarting playlist sync on $(date)\n\n" >>${LOG} 2>&1
 
+# pseudocode for mult-playlist version
+: '
+takes three parameters - a filename, a local path and an MTP path
+the file contains a list of .m3u playlists, the local path is the music library root, the MTP path is the Android phone music library root
+error check command-line parameter
+open file (error if not found)
+iterate over lines in file
+	read name of playlist file
+	open playlist file
+	iterate over lines in the file
+		rsync file to destination
+	end iteration
+end iteration
+'
+
+# single-playlist version
+: '
+up to 3 parameters
+- MTP destination library root
+- full path/filename of playlist
+- source library root (~/Music assumed if not supplied)
+error check command-line parameters
+use sed/awk to strip all but filepaths > temp file
+call rsync, passing temp file as --files-from=FILE
+'
+
 # validate that both parameters were provided
 [ "$#" -eq 2 ] || die "2 arguments required, $# provided (absolute path to root of source music library, m3u file to sync)"
 
+# strip any trailing / from source library parameter
+#SOURCE_PATH="${1%/}"
 
 # process .m3u file to a temp file, keeping only lines that begin with a "/" (that is, file paths of music files)
 TEMP_FILE=$(mktemp)
@@ -65,8 +93,10 @@ case $1 in
 esac
 
 # now strip the source library path from the files in the playlist to make them relative
-# (using # as the sed command field separator because the paths will contain /)
 sed -i -e "s#^$SOURCE_PATH##" ${TEMP_FILE}
+
+# prefix all lines in temp file with the source music library root directory. Using # in the sed command because the prefix might include the "/" character
+#sed -i -e "s#^#${SOURCE_PATH}#" ${TEMP_FILE}
 
 # pass temp file to rsync for copying from the source library to the destination library
 # the destination assumes the directory setup supplied by the SSHelper Android app; the root
