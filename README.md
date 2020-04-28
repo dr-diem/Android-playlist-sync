@@ -21,3 +21,7 @@ It will use rsync to connect to localhost on port 2222. It is the user's respons
 N.B. 2222 is the default listening port for SSHelper - an Android app that implements SSHD and the one I happen to use.
  
 2. Get SSHD running on the phone. This script assumes that the root folder when logged in will contain a sub-directory path named SDCard/Music (again, this is the default for SSHelper)
+
+# What no MTP?
+
+I don't know if you've noticed but don't all MTP implementations seem to suck badly? Perhaps I've just been unlucky, but I think it's just that the protocol is sucky itself. rsync/SSH/ADB is fast (~2.5GB/min or roughly 43MB/s), reliable, recoverable (rsync will pick up where it left off and only sync changes) and, if that weren't enough, well-supported!
