@@ -32,27 +32,36 @@
 # 2. Get  SSHD running on the phone. This script assumes the root folder when logged in will 
 #	 contain a sub-directory path named SDCard/Music (again, this is the default for SSHelper)
 
+# Errors FAQ
+#
+# error: unknown host service - this means either that the phone is not connected via USB or
+#								that USB debugging is not enable on the phone.
+#
+
 SPATH="/usr/local/sbin"
-LOG=./sync_playlist.log
+LOG=/var/log/sync_playlist.log
 
 # exit proc, displaying a supplied string before doing so
 die () {
-    echo "$@" >>${LOG} >&2
-    if [ -e ${TEMP_FILE} ]; then
-    	rm ${TEMP_FILE}
-    fi
+    echo "$@"  |& tee -a ${LOG}
     exit 1
 }
 
-printf "\n\n\nStarting playlist sync on $(date)\n\n" >>${LOG} 2>&1
+# test if ssh connection is working
+#SSH_TEST=$(ssh -o BatchMode=yes -o ConnectTimeout=5 -p 2222 localhost | grep "Connection refused")
+
+printf "\n\n\nStarting playlist sync on $(date)\n\n"  |& tee -a ${LOG}
 
 # validate that both parameters were provided
 [ "$#" -eq 2 ] || die "2 arguments required, $# provided (absolute path to root of source music library, m3u file to sync)"
 
+printf "\nBefore we begin, have you:\n\n1. Plugged your phone in to this computer via USB?\n2. Enabled USB debug in Developer Settings?\n3. Executed 'adb forward tcp:2222 tcp:2222' to map local port 2222 to the same port on the phone?\n4. Started an sshd server on the phone?\n\n"
+read  -p "Type 'y' to continue or 'n' to abort: " reply
+[ "$reply" == "y" ] || die "Quitting"
 
 # process .m3u file to a temp file, keeping only lines that begin with a "/" (that is, file paths of music files)
 TEMP_FILE=$(mktemp)
-grep -i ^/ "$2" > ${TEMP_FILE}
+grep -i ^/ "$2" > $TEMP_FILE
 
 # ensure the source library path has a terminating /
 case $1 in
@@ -66,7 +75,7 @@ esac
 
 # now strip the source library path from the files in the playlist to make them relative
 # (using # as the sed command field separator because the paths will contain /)
-sed -i -e "s#^$SOURCE_PATH##" ${TEMP_FILE}
+sed -i -e "s#^$SOURCE_PATH##" $TEMP_FILE
 
 # pass temp file to rsync for copying from the source library to the destination library
 # the destination assumes the directory setup supplied by the SSHelper Android app; the root
@@ -76,7 +85,7 @@ sed -i -e "s#^$SOURCE_PATH##" ${TEMP_FILE}
 # -t - preserve file modification timestamps
 # -h - show numbers as human-readable
 # -e - use this to pass a non-standard port to the ssh client
-rsync -vth -e "ssh -p 2222" --progress --files-from=${TEMP_FILE} "$SOURCE_PATH" localhost:SDCard/Music >>${LOG} 2>&1
+rsync -vth -e "ssh -p 2222" --progress --files-from=$TEMP_FILE "$SOURCE_PATH" localhost:SDCard/Music |& tee -a ${LOG}
 
 # delete temp file
 rm "${TEMP_FILE}"
