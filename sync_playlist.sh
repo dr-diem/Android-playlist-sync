@@ -77,15 +77,31 @@ esac
 # (using # as the sed command field separator because the paths will contain /)
 sed -i -e "s#^$SOURCE_PATH##" $TEMP_FILE
 
-# pass temp file to rsync for copying from the source library to the destination library
+printf "\n\nCreating temporary copies of files..\n"  |& tee -a ${LOG}
+# use the temp filelist to create a temporary directory containing all the files to sync. I cannot simply pass the filelist to rsync's
+# --files-from option, because my desired behaviour is to delete files/dirs from the destination not present in the filelist, and --files-from
+# explicitly does not do that, unlike 'vanilla' rsync.
+TEMP_DIR=$(mktemp -d)
+# rsync parameters:
+# -t - preserve file modification timestamps
+# -h - show numbers as human-readable
+rsync -th --files-from=$TEMP_FILE "$SOURCE_PATH" "$TEMP_DIR" |& tee -a ${LOG}
+printf "\n..completed.\n"  |& tee -a ${LOG}
+
+# pass temp dir to rsync for syncing to the destination library
 # the destination assumes the directory setup supplied by the SSHelper Android app; the root
 # contains just one subdir - SDCard - that is equivalent to /Storage/Emulated/0
 # rsync parameters:
 # -v - be verbose
+# -r - recursive (required in order to use the --delete option)
 # -t - preserve file modification timestamps
 # -h - show numbers as human-readable
 # -e - use this to pass a non-standard port to the ssh client
-rsync -vth -e "ssh -p 2222" --progress --files-from=$TEMP_FILE "$SOURCE_PATH" localhost:SDCard/Music |& tee -a ${LOG}
+# --progress - display progress
+# --delete - delete files from destination not present in the source
+# --itemize-changes - provide details of exatcly how each file & dir is altered
+rsync -vrth -e "ssh -p 2222" --progress --delete --itemize-changes "$TEMP_DIR/" localhost:SDCard/Music |& tee -a ${LOG}
 
-# delete temp file
+# delete temp filelist and directory
 rm "${TEMP_FILE}"
+rm -rf "${TEMP_DIR}"

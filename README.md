@@ -1,12 +1,18 @@
 # Android-playlist-sync
 
-The purpose of this script is to synchronise the set of audio files listed in a supplied set of playlist files, from the  device running the script to an Android phone mounted via SSH. For speed, the SSH server can be mapped to a wired ADB connection.  Any format of playlist that lists one file per line and lists each file path with an absolute path will work.
+The purpose of these scripts is to synchronise the set of audio files listed in a supplied (set of) playlist files, from the  device running the script to an Android phone mounted via SSH. For speed, the SSH server can be mapped to a wired ADB connection.  Any format of playlist that lists one file per line and lists each file path with an absolute path will work.
 
 So far, I have implemented syncing from just one playlist rather than a folder full of them.
 
-USAGE
+/copy_playlist.sh/
+This script simply copies all files listed in the playlist from the source library to the phone. Anything present on the phone will not be deleted. This means that, if the playlist is changed over time, anything removed from the playlist will remain on the phone. For this reason I also provide the following sync script.
 
-The script takes two parameters:
+/sync_playlist.sh/
+This will genuinely sync - i.e. any file not present in the playlist but present on the phone will be deleted. Due to a limitation of rsync (the --files-from option does not delete from destination), this script is significantly slower since it needs to generate a temporary local directory with copies of all files in the playlist, then syncs that with the phone.
+
+USAGE (same for both scripts)
+
+The scripts takes two parameters:
 
 1. The absolute path to the root folder of the source music library
 2. The name of a playlist file.
